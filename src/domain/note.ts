@@ -1,8 +1,12 @@
 export const NOTE_COLORS = ['yellow', 'pink', 'blue', 'green'] as const;
 export const MIN_NOTE_SIZE: Size = { width: 120, height: 120 };
+export const DEFAULT_NOTE_SIZE: Size = { width: 140, height: 140 };
 
 export type NoteColor = (typeof NOTE_COLORS)[number];
 // → 'yellow' | 'pink' | 'blue' | 'green'
+
+export const randomNoteColor = (): NoteColor =>
+  NOTE_COLORS[Math.floor(Math.random() * NOTE_COLORS.length)];
 
 export interface Position {
   x: number;
@@ -29,7 +33,7 @@ export interface Note {
 
 export type NoteAction =
 | { type: 'notes/loaded'; notes: Note[] }
-| { type: 'note/created'; note: Note }
+| { type: 'note/created'; note: Omit<Note, 'zIndex'> }
 | { type: 'note/removed'; id: NoteId }
 | { type: 'note/moved'; id: NoteId; position: Position }
 | { type: 'note/resized'; id: NoteId; size: Size }

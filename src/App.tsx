@@ -1,7 +1,8 @@
-import { useCallback, useReducer } from 'react';
+import { useCallback, useReducer, useState } from 'react';
 import { notesReducer } from './domain/notesReducer';
-import { createNoteId, type Note, type NoteId, type Position, type Size } from './domain/note';
+import { createNoteId, randomNoteColor, type Note, type NoteColor, type NoteId, type Position, type Size } from './domain/note';
 import { Board } from './components/Board';
+import type { Rect } from './domain/geometry';
 
 // Temporary seed data, will be replaced by persistence
 const SEED_NOTES: Note[] = [
@@ -12,6 +13,22 @@ const SEED_NOTES: Note[] = [
 
 export default function App() {
   const [notes, dispatch] = useReducer(notesReducer, SEED_NOTES);
+  const [lastCreatedId, setLastCreatedId] = useState<NoteId | null>(null);
+
+  const handleNoteCreate = useCallback((rect: Rect) => {
+    const id = createNoteId();
+    setLastCreatedId(id);
+    dispatch({
+      type: 'note/created',
+      note: {
+        id,
+        text: '',
+        color: randomNoteColor(),
+        position: { x: rect.x, y: rect.y },
+        size: { width: rect.width, height: rect.height },
+     },
+  });
+}, []);
 
   const handleNoteMove = useCallback(
     (id: NoteId, position: Position) => dispatch({ type: 'note/moved', id, position }),
@@ -33,6 +50,27 @@ export default function App() {
     [],
   );
 
+  const handleNoteTextChange = useCallback(
+    (id: NoteId, text: string) => dispatch({ type: 'note/textChanged', id, text }),
+    [],
+  );
 
-  return <Board notes={notes} onNoteMove={handleNoteMove} onNoteFocus={handleNoteFocus} onNoteDelete={handleNoteDelete} onNoteResize={handleNoteResize} />;
+  const handleNoteColorChange = useCallback(
+  (id: NoteId, color: NoteColor) => dispatch({ type: 'note/colorChanged', id, color }),
+  [],
+);
+
+  return (
+    <Board
+      notes={notes}
+      lastCreatedId={lastCreatedId}
+      onNoteCreate={handleNoteCreate}
+      onNoteMove={handleNoteMove}
+      onNoteResize={handleNoteResize}
+      onNoteFocus={handleNoteFocus}
+      onNoteDelete={handleNoteDelete}
+      onNoteTextChange={handleNoteTextChange}
+      onNoteColorChange={handleNoteColorChange}
+    />
+  );  
 }

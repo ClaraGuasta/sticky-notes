@@ -2,6 +2,8 @@ import { memo, useState } from 'react';
 import type { Note, NoteColor, NoteId, Position, Size } from '../domain/note';
 import { usePointerDrag } from '../hooks/usePointerDrag';
 import { clampSize } from '../domain/geometry';
+import { NOTE_BG_CLASSES } from '../styles/noteColors';
+import { ColorPicker } from './ColorPicker';
 
 const COLOR_CLASSES: Record<NoteColor, string> = {
   yellow: 'bg-yellow-200',
@@ -13,21 +15,27 @@ const COLOR_CLASSES: Record<NoteColor, string> = {
 interface NoteCardProps {
   note: Note;
   isOverTrash: boolean;
+  autoFocus: boolean;
   onFocus: (id: NoteId) => void;
   onDragMove: (id: NoteId, pointer: Position) => void;
   onDragEnd: (id: NoteId, pointer: Position, position: Position) => void;
   onDragCancel: () => void;
   onResize: (id: NoteId, size: Size) => void;
+  onTextChange: (id: NoteId, text: string) => void;
+  onColorChange: (id: NoteId, color: NoteColor) => void;
 }
 
 export const NoteCard = memo(function NoteCard({
   note,
   isOverTrash,
+  autoFocus,
   onFocus,
   onDragMove,
   onDragEnd,
   onDragCancel,
-  onResize
+  onResize,
+  onTextChange,
+  onColorChange,
 }: NoteCardProps) {
   const { id, position, size, color, zIndex, text } = note;
   const [dragOffset, setDragOffset] = useState<Position | null>(null);
@@ -74,9 +82,9 @@ export const NoteCard = memo(function NoteCard({
   return (
     <div
       onPointerDown={() => onFocus(id)}
-      className={`absolute left-0 top-0 flex flex-col rounded-sm ${COLOR_CLASSES[color]} ${
+      className={`group absolute top-0 left-0 flex flex-col rounded-sm transition-opacity ${NOTE_BG_CLASSES[color]} ${
         isDragging ? 'shadow-xl' : 'shadow-md'
-      }  ${isOverTrash ? 'opacity-50' : ''}`}      
+      } ${isOverTrash ? 'opacity-50' : ''}`}    
       style={{
         transform: `translate(${x}px, ${y}px)`,
         width: displaySize.width,
@@ -86,9 +94,29 @@ export const NoteCard = memo(function NoteCard({
     >
       <div
         onPointerDown={handleHeaderPointerDown}
-        className="h-6 shrink-0 cursor-grab bg-black/5"
+        className={`flex h-6 shrink-0 items-center justify-end bg-black/5 px-1.5 ${
+          isDragging ? 'cursor-grabbing' : 'cursor-grab'
+        }`}
+      >
+        <ColorPicker
+          value={color}
+          onChange={(newColor) => onColorChange(id, newColor)}
+          className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
+        />
+      </div>
+
+      <textarea
+        value={text}
+        onChange={(e) => onTextChange(id, e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') e.currentTarget.blur();
+        }}
+        autoFocus={autoFocus}
+        placeholder="Write something…"
+        aria-label="Note text"
+        className="flex-1 resize-none bg-transparent p-2 text-sm text-stone-800 outline-none select-text placeholder:text-black/30"
       />
-      <p className="flex-1 overflow-auto p-2 text-sm whitespace-pre-wrap">{text}</p>
+
       <div
         onPointerDown={handleResizePointerDown}
         aria-hidden="true"
