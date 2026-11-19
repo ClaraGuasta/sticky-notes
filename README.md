@@ -7,7 +7,7 @@ A single-page sticky notes board built with **React + TypeScript**, without UI o
 **Required**
 - **Create** a note at a chosen position and size: click **+ New note**, then click on the board (default size) or drag to draw the note's exact rectangle. `Esc` cancels.
 - **Move** a note by dragging its top bar.
-- **Resize** a note by dragging its bottom-right corner (minimum 200×200).
+- **Resize** a note by dragging its bottom-right corner (minimum 120x120).
 - **Delete** a note by dropping it on the trash zone (bottom-right). The trash highlights while a note hovers over it.
 
 **Bonus**

@@ -39,23 +39,13 @@ export function useNotesPersistence(
 
 
   useEffect(() => {
+    // Saving before the initial load finishes would overwrite stored notes with the empty initial state
     if (status !== 'ready') return;
 
     const timeout = setTimeout(() => {
       saveQueueRef.current = saveQueueRef.current
         .then(() => repository.save(notes))
         .catch((error: unknown) => console.error('Failed to save notes', error));
-    }, SAVE_DEBOUNCE_MS);
-
-    return () => clearTimeout(timeout);
-  }, [notes, status, repository]);
-
-  useEffect(() => {
-    // Saving before the initial load finishes would overwrite stored notes with the empty initial state
-    if (status !== 'ready') return;
-
-    const timeout = setTimeout(() => {
-      repository.save(notes).catch((error: unknown) => console.error('Failed to save notes', error));
     }, SAVE_DEBOUNCE_MS);
 
     return () => clearTimeout(timeout);
