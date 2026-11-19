@@ -30,13 +30,3 @@ export interface Note {
   color: NoteColor;
   zIndex: number;
 }
-
-export type NoteAction =
-| { type: 'notes/loaded'; notes: Note[] }
-| { type: 'note/created'; note: Omit<Note, 'zIndex'> }
-| { type: 'note/removed'; id: NoteId }
-| { type: 'note/moved'; id: NoteId; position: Position }
-| { type: 'note/resized'; id: NoteId; size: Size }
-| { type: 'note/textChanged'; id: NoteId; text: string }
-| { type: 'note/colorChanged'; id: NoteId; color: NoteColor }
-| { type: 'note/broughtToFront'; id: NoteId };

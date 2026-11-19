@@ -1,19 +1,19 @@
 import { useCallback, useReducer, useState } from 'react';
 import { notesReducer } from './domain/notesReducer';
-import { createNoteId, randomNoteColor, type Note, type NoteColor, type NoteId, type Position, type Size } from './domain/note';
+import { createNoteId, randomNoteColor, type NoteColor, type NoteId, type Position, type Size } from './domain/note';
 import { Board } from './components/Board';
 import type { Rect } from './domain/geometry';
+import { createLocalStorageNotesRepository } from './persistence/localStorageNotesRepository';
+import { StatusMessage } from './components/StatusMessage';
+import { useNotesPersistence } from './hooks/useNotesPersistence';
 
-// Temporary seed data, will be replaced by persistence
-const SEED_NOTES: Note[] = [
-  { id: createNoteId(), text: 'Hola!', position: { x: 80, y: 80 }, size: { width: 200, height: 160 }, color: 'yellow', zIndex: 1 },
-  { id: createNoteId(), text: 'Otra nota', position: { x: 220, y: 180 }, size: { width: 180, height: 180 }, color: 'pink', zIndex: 2 },
-  { id: createNoteId(), text: 'Tercera', position: { x: 480, y: 120 }, size: { width: 240, height: 140 }, color: 'blue', zIndex: 3 },
-];
+const notesRepository = createLocalStorageNotesRepository();
 
 export default function App() {
-  const [notes, dispatch] = useReducer(notesReducer, SEED_NOTES);
+  const [notes, dispatch] = useReducer(notesReducer, []);
   const [lastCreatedId, setLastCreatedId] = useState<NoteId | null>(null);
+
+  const status = useNotesPersistence(notesRepository, notes, dispatch);
 
   const handleNoteCreate = useCallback((rect: Rect) => {
     const id = createNoteId();
@@ -56,10 +56,16 @@ export default function App() {
   );
 
   const handleNoteColorChange = useCallback(
-  (id: NoteId, color: NoteColor) => dispatch({ type: 'note/colorChanged', id, color }),
-  [],
-);
+    (id: NoteId, color: NoteColor) => dispatch({ type: 'note/colorChanged', id, color }),
+    [],
+  );
 
+ if (status === 'loading') {
+    return <StatusMessage>Loading notes…</StatusMessage>;
+  }
+  if (status === 'error') {
+    return <StatusMessage>Couldn't load your notes. Please reload the page.</StatusMessage>;
+  }
   return (
     <Board
       notes={notes}
