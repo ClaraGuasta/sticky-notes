@@ -1,4 +1,4 @@
-import { useEffect, useState, type Dispatch } from 'react';
+import { useEffect, useRef, useState, type Dispatch } from 'react';
 import type { Note } from '../domain/note';
 import type { NotesRepository } from '../persistence/NotesRepository';
 import type { NoteAction } from '../domain/notesReducer';
@@ -12,6 +12,8 @@ export function useNotesPersistence(
   notes: Note[],
   dispatch: Dispatch<NoteAction>,
 ): PersistenceStatus {
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
+
   const [status, setStatus] = useState<PersistenceStatus>('loading');
 
   useEffect(() => {
@@ -34,6 +36,19 @@ export function useNotesPersistence(
       cancelled = true;
     };
   }, [repository, dispatch]);
+
+
+  useEffect(() => {
+    if (status !== 'ready') return;
+
+    const timeout = setTimeout(() => {
+      saveQueueRef.current = saveQueueRef.current
+        .then(() => repository.save(notes))
+        .catch((error: unknown) => console.error('Failed to save notes', error));
+    }, SAVE_DEBOUNCE_MS);
+
+    return () => clearTimeout(timeout);
+  }, [notes, status, repository]);
 
   useEffect(() => {
     // Saving before the initial load finishes would overwrite stored notes with the empty initial state

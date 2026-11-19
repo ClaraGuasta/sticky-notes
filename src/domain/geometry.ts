@@ -13,6 +13,14 @@ export const isPointInRect = (point: Position, rect: Rect): boolean =>
   point.y >= rect.y &&
   point.y <= rect.y + rect.height;
 
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(value, max));
+
+export const clampRectToBounds = (rect: Rect, bounds: Size): Rect => ({
+  ...rect,
+  x: clamp(rect.x, 0, Math.max(0, bounds.width - rect.width)),
+  y: clamp(rect.y, 0, Math.max(0, bounds.height - rect.height)),
+});
+
 export const clampSize = (size: Size): Size => ({
   width: Math.max(MIN_NOTE_SIZE.width, size.width),
   height: Math.max(MIN_NOTE_SIZE.height, size.height),

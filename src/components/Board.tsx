@@ -1,9 +1,31 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { DEFAULT_NOTE_SIZE, MIN_NOTE_SIZE, type Note, type NoteColor, type NoteId, type Position, type Size } from '../domain/note';
-import { NoteCard } from './NoteCard';
-import { isBelowDragThreshold, isPointInRect, rectFromDrag, type Rect } from '../domain/geometry';
-import { TrashZone } from './TrashZone';
+import {
+  DEFAULT_NOTE_SIZE,
+  MIN_NOTE_SIZE,
+  type Note,
+  type NoteColor,
+  type NoteId,
+  type Position,
+  type Size,
+} from '../domain/note';
+import { clampRectToBounds, isBelowDragThreshold, isPointInRect, rectFromDrag, type Rect } from '../domain/geometry';
 import { usePointerDrag } from '../hooks/usePointerDrag';
+import { useOnboardingFlag } from '../hooks/useOnboardingFlag';
+import { NoteCard } from './NoteCard';
+import { TrashZone } from './TrashZone';
+import { EmptyState } from './EmptyState';
+import { FirstNoteTip } from './FirstNoteTip';
+
+// The board fills the viewport, so the window size is its bounds
+const keepInsideBoard = (rect: Rect): Rect =>
+  clampRectToBounds(rect, { width: window.innerWidth, height: window.innerHeight });
+
+const getCreationRect = (delta: Position, pointer: Position): Rect => {
+  const start = { x: pointer.x - delta.x, y: pointer.y - delta.y };
+  return isBelowDragThreshold(delta)
+    ? { ...start, ...DEFAULT_NOTE_SIZE } // click: default size at that point
+    : rectFromDrag(start, pointer, MIN_NOTE_SIZE);
+};
 
 interface BoardProps {
   notes: Note[];
@@ -26,12 +48,17 @@ export function Board({
   onNoteDelete,
   onNoteResize,
   onNoteTextChange,
-  onNoteColorChange
+  onNoteColorChange,
 }: BoardProps) {
   const trashRef = useRef<HTMLDivElement>(null);
+
   const [trashHoverId, setTrashHoverId] = useState<NoteId | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [draftRect, setDraftRect] = useState<Rect | null>(null);
+
+  const onboarding = useOnboardingFlag();
+  const tipNote = onboarding.isDone ? undefined : notes.find((n) => n.id === lastCreatedId);
+  const isEmpty = notes.length === 0;
 
   // --- Trash ---
 
@@ -46,10 +73,14 @@ export function Board({
   );
 
   const handleDragEnd = useCallback(
-    (id: NoteId, pointer: Position, position: Position) => {
+    (id: NoteId, pointer: Position, rect: Rect) => {
       setTrashHoverId(null);
-      if (isOverTrash(pointer)) onNoteDelete(id);
-      else onNoteMove(id, position);
+      if (isOverTrash(pointer)) {
+        onNoteDelete(id);
+        return;
+      }
+      const { x, y } = keepInsideBoard(rect);
+      onNoteMove(id, { x, y });
     },
     [isOverTrash, onNoteDelete, onNoteMove],
   );
@@ -63,7 +94,6 @@ export function Board({
     setDraftRect(null);
   }, []);
 
-
   useEffect(() => {
     if (!isCreating) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -75,23 +105,18 @@ export function Board({
 
   const handleCreatePointerDown = usePointerDrag({
     onMove: (delta, pointer) => {
-      const start = { x: pointer.x - delta.x, y: pointer.y - delta.y };
-      setDraftRect(isBelowDragThreshold(delta) ? null : rectFromDrag(start, pointer, MIN_NOTE_SIZE));
+      setDraftRect(isBelowDragThreshold(delta) ? null : getCreationRect(delta, pointer));
     },
     onEnd: (delta, pointer) => {
-      const start = { x: pointer.x - delta.x, y: pointer.y - delta.y };
       exitCreationMode();
-      onNoteCreate(
-        isBelowDragThreshold(delta)
-          ? { ...start, ...DEFAULT_NOTE_SIZE } // click: default size at that point
-          : rectFromDrag(start, pointer, MIN_NOTE_SIZE),
-      );
+      onNoteCreate(keepInsideBoard(getCreationRect(delta, pointer)));
     },
     onCancel: () => setDraftRect(null),
   });
-  
+
   return (
     <div className="fixed inset-0 overflow-hidden bg-stone-100 select-none">
+      {/* Isolated stacking context: note z-indexes grow unbounded, but never cover the UI */}
       <div className="absolute inset-0 isolate">
         {notes.map((note) => (
           <NoteCard
@@ -109,8 +134,14 @@ export function Board({
           />
         ))}
       </div>
-      
+
       <TrashZone ref={trashRef} isActive={trashHoverId !== null} />
+
+      {isEmpty && !isCreating && <EmptyState />}
+
+      {tipNote && !isCreating && (
+        <FirstNoteTip anchor={{ ...tipNote.position, ...tipNote.size }} onDismiss={onboarding.markDone} />
+      )}
 
       {isCreating && (
         <>
@@ -142,11 +173,10 @@ export function Board({
         aria-pressed={isCreating}
         className={`absolute top-4 right-4 z-30 cursor-pointer rounded-md px-4 py-2 text-sm font-medium shadow transition ${
           isCreating ? 'bg-stone-700 text-white hover:bg-stone-800' : 'bg-white text-stone-700 hover:bg-stone-50'
-        }`}
+        } ${isEmpty && !isCreating ? 'ring-4 ring-white/80' : ''}`}
       >
         {isCreating ? 'Cancel' : '+ New note'}
       </button>
-
     </div>
   );
 }

@@ -6,8 +6,13 @@ import type { Rect } from './domain/geometry';
 import { createLocalStorageNotesRepository } from './persistence/localStorageNotesRepository';
 import { StatusMessage } from './components/StatusMessage';
 import { useNotesPersistence } from './hooks/useNotesPersistence';
+import { createMockApiNotesRepository } from './persistence/mockApiNotesRepository';
 
-const notesRepository = createLocalStorageNotesRepository();
+const shouldUseMockApi = import.meta.env.VITE_USE_MOCK_API !== 'false';
+
+const notesRepository = shouldUseMockApi
+  ? createMockApiNotesRepository()
+  : createLocalStorageNotesRepository();
 
 export default function App() {
   const [notes, dispatch] = useReducer(notesReducer, []);

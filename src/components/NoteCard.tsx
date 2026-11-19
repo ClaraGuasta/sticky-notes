@@ -1,16 +1,9 @@
 import { memo, useState } from 'react';
 import type { Note, NoteColor, NoteId, Position, Size } from '../domain/note';
 import { usePointerDrag } from '../hooks/usePointerDrag';
-import { clampSize } from '../domain/geometry';
+import { clampSize, type Rect } from '../domain/geometry';
 import { NOTE_BG_CLASSES } from '../styles/noteColors';
 import { ColorPicker } from './ColorPicker';
-
-const COLOR_CLASSES: Record<NoteColor, string> = {
-  yellow: 'bg-yellow-200',
-  pink: 'bg-pink-200',
-  blue: 'bg-sky-200',
-  green: 'bg-green-200',
-};
 
 interface NoteCardProps {
   note: Note;
@@ -18,7 +11,7 @@ interface NoteCardProps {
   autoFocus: boolean;
   onFocus: (id: NoteId) => void;
   onDragMove: (id: NoteId, pointer: Position) => void;
-  onDragEnd: (id: NoteId, pointer: Position, position: Position) => void;
+  onDragEnd: (id: NoteId, pointer: Position, rect: Rect) => void;
   onDragCancel: () => void;
   onResize: (id: NoteId, size: Size) => void;
   onTextChange: (id: NoteId, text: string) => void;
@@ -60,7 +53,7 @@ export const NoteCard = memo(function NoteCard({
         onDragCancel(); // plain click, nothing to commit
         return;
       }
-      onDragEnd(id, pointer, { x: position.x + delta.x, y: position.y + delta.y });
+      onDragEnd(id, pointer, { x: position.x + delta.x, y: position.y + delta.y, ...size });
     },
     onCancel: () => {
       setDragOffset(null);
